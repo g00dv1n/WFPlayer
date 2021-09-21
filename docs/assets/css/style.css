@@ -165,7 +165,8 @@ body,
 .waveform {
     position: relative;
     display: flex;
-    height: 200px;
+    width: 1500px;
+    height: 500px;
     background-color: rgb(28, 32, 34);
     border-top: 1px solid rgb(10, 10, 10);
 }

@@ -151,7 +151,7 @@
 	module.exports["default"] = module.exports, module.exports.__esModule = true;
 	});
 
-	unwrapExports(_typeof_1);
+	var _typeof = unwrapExports(_typeof_1);
 
 	var possibleConstructorReturn = createCommonjsModule(function (module) {
 	var _typeof = _typeof_1["default"];
@@ -161,6 +161,8 @@
 	function _possibleConstructorReturn(self, call) {
 	  if (call && (_typeof(call) === "object" || typeof call === "function")) {
 	    return call;
+	  } else if (call !== void 0) {
+	    throw new TypeError("Derived constructors may only return object or undefined");
 	  }
 
 	  return assertThisInitialized(self);
@@ -470,8 +472,8 @@
 
 	    this.wf = wf;
 	    this.canvas = null;
-	    var refreshRate = wf.options.refreshRate;
-	    this.update = throttle(this.init, refreshRate, this);
+	    var refreshDelay = wf.options.refreshDelay;
+	    this.update = throttle(this.init, refreshDelay, this);
 	    this.init();
 	  }
 
@@ -480,31 +482,41 @@
 	    value: function init() {
 	      var _this$wf$options = this.wf.options,
 	          container = _this$wf$options.container,
-	          pixelRatio = _this$wf$options.pixelRatio;
-	      var clientWidth = container.clientWidth,
-	          clientHeight = container.clientHeight;
-	      var width = clientWidth * pixelRatio;
-	      var height = clientHeight * pixelRatio;
+	          pixelRatio = _this$wf$options.pixelRatio,
+	          width = _this$wf$options.width,
+	          height = _this$wf$options.height,
+	          shadowCanvas = _this$wf$options.shadowCanvas;
+
+	      var _ref = container || {},
+	          clientWidth = _ref.clientWidth,
+	          clientHeight = _ref.clientHeight;
+
+	      var _width = width || clientWidth * pixelRatio;
+
+	      var _height = height || clientHeight * pixelRatio;
 
 	      if (this.canvas) {
-	        if (this.canvas.width !== width) {
-	          this.canvas.width = width;
+	        if (this.canvas.width !== _width) {
+	          this.canvas.width = _width;
 	        }
 
-	        if (this.canvas.height !== height) {
-	          this.canvas.height = height;
+	        if (this.canvas.height !== _height) {
+	          this.canvas.height = _height;
 	        }
 	      } else {
 	        errorHandle(this.wf.constructor.instances.every(function (wf) {
 	          return wf.options.container !== container;
 	        }), 'Cannot mount multiple instances on the same dom element, please destroy the previous instance first.');
-	        container.innerHTML = '';
 	        this.canvas = document.createElement('canvas');
-	        this.canvas.width = width;
-	        this.canvas.height = height;
-	        this.canvas.style.width = '100%';
-	        this.canvas.style.height = '100%';
-	        container.appendChild(this.canvas);
+	        this.canvas.width = _width;
+	        this.canvas.height = _height;
+
+	        if (!shadowCanvas) {
+	          container.innerHTML = '';
+	          this.canvas.style.width = '100%';
+	          this.canvas.style.height = '100%';
+	          container.appendChild(this.canvas);
+	        }
 	      }
 	    }
 	  }, {
@@ -512,11 +524,22 @@
 	    value: function exportImage() {
 	      var elink = document.createElement('a');
 	      elink.style.display = 'none';
-	      elink.href = this.canvas.toDataURL('image/png');
-	      elink.download = "".concat(Date.now(), ".png");
+	      elink.href = this.canvas.toDataURL('image/jpeg');
+	      elink.download = "".concat(Date.now(), ".jpeg");
 	      document.body.appendChild(elink);
 	      elink.click();
 	      document.body.removeChild(elink);
+	    }
+	  }, {
+	    key: "exportImageAsBlob",
+	    value: function exportImageAsBlob() {
+	      var _this = this;
+
+	      return new Promise(function (resolve) {
+	        _this.canvas.toBlob(function (blob) {
+	          resolve(blob);
+	        }, 'image/jpeg');
+	      });
 	    }
 	  }, {
 	    key: "destroy",
@@ -576,7 +599,7 @@
 
 	var _objectWithoutProperties = unwrapExports(objectWithoutProperties);
 
-	function ownKeys$2(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+	function ownKeys$2(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
 
 	function _objectSpread$2(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$2(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$2(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 	var worker = createCommonjsModule(function (module, exports) {
@@ -590,6 +613,17 @@
 	  var density = 1;
 	  var sampleRate = 44100;
 	  var channelData = new Float32Array();
+
+	  function processColor(colorConf, width) {
+	    if (_typeof(colorConf) === 'object') {
+	      var gradient = ctx.createLinearGradient(0, 0, width, 0);
+	      gradient.addColorStop(0, colorConf.startColor);
+	      gradient.addColorStop(1, colorConf.endColor);
+	      return gradient;
+	    }
+
+	    return colorConf;
+	  }
 
 	  function secondToTime(second) {
 	    var add0 = function add0(num) {
@@ -625,7 +659,7 @@
 	        paddingColor = data.paddingColor,
 	        padding = data.padding;
 	    ctx.clearRect(0, 0, width, height);
-	    ctx.fillStyle = backgroundColor;
+	    ctx.fillStyle = processColor(backgroundColor, width);
 	    ctx.fillRect(0, 0, width, height);
 	    ctx.fillStyle = paddingColor;
 	    ctx.fillRect(0, 0, padding * gridGap, height);
@@ -718,7 +752,7 @@
 	      if (stepIndex >= step && xIndex < waveWidth) {
 	        xIndex += 1;
 	        var waveX = gridGap * padding + xIndex;
-	        ctx.fillStyle = progress && cursorX >= waveX ? progressColor : waveColor;
+	        ctx.fillStyle = processColor(progress && cursorX >= waveX ? progressColor : waveColor, width);
 	        ctx.fillRect(waveX, (1 + min * waveScale) * middle, 1, Math.max(1, (max - min) * middle * waveScale));
 	        stepIndex = 0;
 	        min = 1;
@@ -825,6 +859,7 @@
 	        });
 	      } else {
 	        wf.emit('update', config);
+	        wf.emit('finish');
 	      }
 	    }
 	  };
@@ -839,7 +874,9 @@
 	});
 	worker.postMessage;
 
-	function ownKeys$1(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+	var _excluded = ["container", "mediaElement"];
+
+	function ownKeys$1(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
 
 	function _objectSpread$1(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys$1(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys$1(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 
@@ -852,22 +889,24 @@
 	    this.wf = wf;
 	    this.canvas = wf.template.canvas;
 	    var _wf$options = wf.options,
-	        refreshRate = _wf$options.refreshRate,
+	        refreshDelay = _wf$options.refreshDelay,
 	        useWorker = _wf$options.useWorker;
-	    this.update = throttle(this.update, refreshRate, this);
+	    this.update = throttle(this.update, refreshDelay, this);
 
 	    if (useWorker && window.OffscreenCanvas && window.Worker) {
-	      this.worker = new Worker(URL.createObjectURL(new Blob(["\"use strict\";function ownKeys(a,b){var c=Object.keys(a);if(Object.getOwnPropertySymbols){var d=Object.getOwnPropertySymbols(a);b&&(d=d.filter(function(b){return Object.getOwnPropertyDescriptor(a,b).enumerable})),c.push.apply(c,d)}return c}function _objectSpread(a){for(var b,c=1;c<arguments.length;c++)b=null==arguments[c]?{}:arguments[c],c%2?ownKeys(Object(b),!0).forEach(function(c){_defineProperty(a,c,b[c])}):Object.getOwnPropertyDescriptors?Object.defineProperties(a,Object.getOwnPropertyDescriptors(b)):ownKeys(Object(b)).forEach(function(c){Object.defineProperty(a,c,Object.getOwnPropertyDescriptor(b,c))});return a}function _defineProperty(a,b,c){return b in a?Object.defineProperty(a,b,{value:c,enumerable:!0,configurable:!0,writable:!0}):a[b]=c,a}var isWorker=self.document===void 0,wf=null,canvas=null,ctx=null,gridNum=0,gridGap=0,beginTime=0,density=1,sampleRate=44100,channelData=new Float32Array;function secondToTime(a){var b=Math.floor(a/3600),c=Math.floor((a-3600*b)/60),d=Math.floor(a-3600*b-60*c);return[b,c,d].map(function add0(a){return 10>a?\"0\".concat(a):a+\"\"}).join(\":\")}function clamp(c,d,a){return Math.max(Math.min(c,Math.max(d,a)),Math.min(d,a))}function getDensity(a){var b=a.pixelRatio;ctx.font=\"\".concat(11*b,\"px Arial\");var c=ctx.measureText(\"99:99:99\").width;return function a(b){var d=gridGap*b/(1.5*c);return 1<d?Math.floor(b/10):a(b+10)}(10)}function drawBackground(a){var b=a.width,c=a.height,d=a.backgroundColor,e=a.paddingColor,f=a.padding;ctx.clearRect(0,0,b,c),ctx.fillStyle=d,ctx.fillRect(0,0,b,c),ctx.fillStyle=e,ctx.fillRect(0,0,f*gridGap,c),ctx.fillRect(b-f*gridGap,0,f*gridGap,c)}function drawGrid(a){var b=a.width,c=a.height,d=a.currentTime,e=a.gridColor,f=a.pixelRatio,g=a.scrollable;ctx.fillStyle=e;for(var h,i=0;i<gridNum+10;i+=density)h=g?gridGap*i-10*((d-parseInt(d,10))*gridGap):gridGap*i,ctx.fillRect(h,0,f,c);for(var j=0;j<c/gridGap;j+=density)ctx.fillRect(0,gridGap*j,b,f)}function drawRuler(a){var b=a.height,c=a.currentTime,d=a.rulerColor,e=a.pixelRatio,f=a.padding,g=a.rulerAtTop,h=a.scrollable,i=11,j=15,k=30;ctx.font=\"\".concat(i*e,\"px Arial\"),ctx.fillStyle=d;for(var l,m=-1,n=0;n<gridNum+10;n+=1)if(l=h?gridGap*n-10*((c-parseInt(c,10))*gridGap):gridGap*n,0==(n-f)%10){m+=1,ctx.fillRect(l,g?0:b-j*e,e,j*e);var o=Math.floor(beginTime+m);0==o%density&&0<=o&&ctx.fillText(secondToTime(o),l-2*(i*e)+e,g?k*e:b-k*e+i)}else 0==(n-f)%5&&ctx.fillRect(l,g?0:b-j/2*e,e,j/2*e)}function drawWave(a){for(var b=a.width,c=a.height,d=a.currentTime,e=a.progress,f=a.waveColor,g=a.progressColor,h=a.duration,j=a.padding,k=a.waveScale,l=a.scrollable,m=c/2,n=b-2*(gridGap*j),o=Math.floor(beginTime*sampleRate),p=Math.floor(clamp((beginTime+h)*sampleRate,o,1/0)),q=Math.floor((p-o)/n),r=l?b/2:j*gridGap+10*((d-beginTime)*gridGap),s=0,t=0,u=1,v=-1,w=o;w<p;w+=1){s+=1;var x=channelData[w]||0;if(x<u?u=x:x>v&&(v=x),s>=q&&t<n){t+=1;var y=gridGap*j+t;ctx.fillStyle=e&&r>=y?g:f,ctx.fillRect(y,(1+u*k)*m,1,Math.max(1,(v-u)*m*k)),s=0,u=1,v=-1}}}function drawCursor(a){var b=a.height,c=a.width,d=a.currentTime,e=a.cursorColor,f=a.pixelRatio,g=a.padding,h=a.scrollable;ctx.fillStyle=e;var i=h?c/2:g*gridGap+10*((d-beginTime)*gridGap);ctx.fillRect(i,0,f,b)}self.onmessage=function(a){var b=a.data,c=b.type,d=b.data;if(\"INIT\"===c&&(isWorker?canvas=new OffscreenCanvas(d.width,d.height):(wf=d.wf,canvas=d.canvas),ctx=canvas.getContext(\"2d\")),\"DECODE\"===c&&(sampleRate=d.sampleRate,channelData=d.channelData),\"UPDATE\"===c){var e=d.width,f=d.height,g=d.currentTime,h=d.cursor,i=d.grid,j=d.ruler,k=d.wave,l=d.duration,m=d.padding,n=d.scrollable;canvas.width!==e&&(canvas.width=e),canvas.height!==f&&(canvas.height=f),gridNum=10*l+2*m,gridGap=e/gridNum,beginTime=n?g-l/2:Math.floor(g/l)*l,density=getDensity(d),drawBackground(d),i&&drawGrid(d),j&&drawRuler(d),k&&drawWave(d),h&&drawCursor(d);var o=channelData,p=o.byteLength,q=_objectSpread({gridNum:gridNum,gridGap:gridGap,beginTime:beginTime,density:density,sampleRate:sampleRate,byteLength:p},d);isWorker?self.postMessage({type:\"UPFATE\",data:{config:q,imageBitmap:canvas.transferToImageBitmap()}}):wf.emit(\"update\",q)}},\"undefined\"==typeof exports||isWorker||(exports.postMessage=function(a){self.onmessage({data:a})});"])));
+	      this.worker = new Worker(URL.createObjectURL(new Blob(["\"use strict\";function ownKeys(a,b){var c=Object.keys(a);if(Object.getOwnPropertySymbols){var d=Object.getOwnPropertySymbols(a);b&&(d=d.filter(function(b){return Object.getOwnPropertyDescriptor(a,b).enumerable})),c.push.apply(c,d)}return c}function _objectSpread(a){for(var b,c=1;c<arguments.length;c++)b=null==arguments[c]?{}:arguments[c],c%2?ownKeys(Object(b),!0).forEach(function(c){_defineProperty(a,c,b[c])}):Object.getOwnPropertyDescriptors?Object.defineProperties(a,Object.getOwnPropertyDescriptors(b)):ownKeys(Object(b)).forEach(function(c){Object.defineProperty(a,c,Object.getOwnPropertyDescriptor(b,c))});return a}function _defineProperty(a,b,c){return b in a?Object.defineProperty(a,b,{value:c,enumerable:!0,configurable:!0,writable:!0}):a[b]=c,a}function _typeof(a){\"@babel/helpers - typeof\";return _typeof=\"function\"==typeof Symbol&&\"symbol\"==typeof Symbol.iterator?function(a){return typeof a}:function(a){return a&&\"function\"==typeof Symbol&&a.constructor===Symbol&&a!==Symbol.prototype?\"symbol\":typeof a},_typeof(a)}var isWorker=self.document===void 0,wf=null,canvas=null,ctx=null,gridNum=0,gridGap=0,beginTime=0,density=1,sampleRate=44100,channelData=new Float32Array;function processColor(a,b){if(\"object\"===_typeof(a)){var c=ctx.createLinearGradient(0,0,b,0);return c.addColorStop(0,a.startColor),c.addColorStop(1,a.endColor),c}return a}function secondToTime(a){var b=Math.floor(a/3600),c=Math.floor((a-3600*b)/60),d=Math.floor(a-3600*b-60*c);return[b,c,d].map(function add0(a){return 10>a?\"0\".concat(a):a+\"\"}).join(\":\")}function clamp(c,d,a){return Math.max(Math.min(c,Math.max(d,a)),Math.min(d,a))}function getDensity(a){var b=a.pixelRatio;ctx.font=\"\".concat(11*b,\"px Arial\");var c=ctx.measureText(\"99:99:99\").width;return function a(b){var d=gridGap*b/(1.5*c);return 1<d?Math.floor(b/10):a(b+10)}(10)}function drawBackground(a){var b=a.width,c=a.height,d=a.backgroundColor,e=a.paddingColor,f=a.padding;ctx.clearRect(0,0,b,c),ctx.fillStyle=processColor(d,b),ctx.fillRect(0,0,b,c),ctx.fillStyle=e,ctx.fillRect(0,0,f*gridGap,c),ctx.fillRect(b-f*gridGap,0,f*gridGap,c)}function drawGrid(a){var b=a.width,c=a.height,d=a.currentTime,e=a.gridColor,f=a.pixelRatio,g=a.scrollable;ctx.fillStyle=e;for(var h,i=0;i<gridNum+10;i+=density)h=g?gridGap*i-10*((d-parseInt(d,10))*gridGap):gridGap*i,ctx.fillRect(h,0,f,c);for(var j=0;j<c/gridGap;j+=density)ctx.fillRect(0,gridGap*j,b,f)}function drawRuler(a){var b=a.height,c=a.currentTime,d=a.rulerColor,e=a.pixelRatio,f=a.padding,g=a.rulerAtTop,h=a.scrollable,i=11,j=15,k=30;ctx.font=\"\".concat(i*e,\"px Arial\"),ctx.fillStyle=d;for(var l,m=-1,n=0;n<gridNum+10;n+=1)if(l=h?gridGap*n-10*((c-parseInt(c,10))*gridGap):gridGap*n,0==(n-f)%10){m+=1,ctx.fillRect(l,g?0:b-j*e,e,j*e);var o=Math.floor(beginTime+m);0==o%density&&0<=o&&ctx.fillText(secondToTime(o),l-2*(i*e)+e,g?k*e:b-k*e+i)}else 0==(n-f)%5&&ctx.fillRect(l,g?0:b-j/2*e,e,j/2*e)}function drawWave(a){for(var b=a.width,c=a.height,d=a.currentTime,e=a.progress,f=a.waveColor,g=a.progressColor,h=a.duration,j=a.padding,k=a.waveScale,l=a.scrollable,m=c/2,n=b-2*(gridGap*j),o=Math.floor(beginTime*sampleRate),p=Math.floor(clamp((beginTime+h)*sampleRate,o,1/0)),q=Math.floor((p-o)/n),r=l?b/2:j*gridGap+10*((d-beginTime)*gridGap),s=0,t=0,u=1,v=-1,w=o;w<p;w+=1){s+=1;var x=channelData[w]||0;if(x<u?u=x:x>v&&(v=x),s>=q&&t<n){t+=1;var y=gridGap*j+t;ctx.fillStyle=processColor(e&&r>=y?g:f,b),ctx.fillRect(y,(1+u*k)*m,1,Math.max(1,(v-u)*m*k)),s=0,u=1,v=-1}}}function drawCursor(a){var b=a.height,c=a.width,d=a.currentTime,e=a.cursorColor,f=a.pixelRatio,g=a.padding,h=a.scrollable;ctx.fillStyle=e;var i=h?c/2:g*gridGap+10*((d-beginTime)*gridGap);ctx.fillRect(i,0,f,b)}self.onmessage=function(a){var b=a.data,c=b.type,d=b.data;if(\"INIT\"===c&&(isWorker?canvas=new OffscreenCanvas(d.width,d.height):(wf=d.wf,canvas=d.canvas),ctx=canvas.getContext(\"2d\")),\"DECODE\"===c&&(sampleRate=d.sampleRate,channelData=d.channelData),\"UPDATE\"===c){var e=d.width,f=d.height,g=d.currentTime,h=d.cursor,i=d.grid,j=d.ruler,k=d.wave,l=d.duration,m=d.padding,n=d.scrollable;canvas.width!==e&&(canvas.width=e),canvas.height!==f&&(canvas.height=f),gridNum=10*l+2*m,gridGap=e/gridNum,beginTime=n?g-l/2:Math.floor(g/l)*l,density=getDensity(d),drawBackground(d),i&&drawGrid(d),j&&drawRuler(d),k&&drawWave(d),h&&drawCursor(d);var o=channelData,p=o.byteLength,q=_objectSpread({gridNum:gridNum,gridGap:gridGap,beginTime:beginTime,density:density,sampleRate:sampleRate,byteLength:p},d);isWorker?self.postMessage({type:\"UPFATE\",data:{config:q,imageBitmap:canvas.transferToImageBitmap()}}):(wf.emit(\"update\",q),wf.emit(\"finish\"))}},\"undefined\"==typeof exports||isWorker||(exports.postMessage=function(a){self.onmessage({data:a})});"])));
 	      this.ctx = this.canvas.getContext('bitmaprenderer');
 	      this.wf.events.proxy(this.worker, 'message', function (event) {
 	        var _event$data = event.data,
 	            type = _event$data.type,
 	            data = _event$data.data;
 
-	        if (type === 'UPFATE') {
+	        if (type === 'UPFATE' && !wf.isDestroy) {
 	          _this.wf.emit('update', data.config);
 
 	          _this.ctx.transferFromImageBitmap(data.imageBitmap);
+
+	          _this.wf.emit('finish');
 	        }
 	      });
 	      this.worker.postMessage({
@@ -912,7 +951,7 @@
 	          _this$wf$options = _this$wf.options;
 	          _this$wf$options.container;
 	          _this$wf$options.mediaElement;
-	          var options = _objectWithoutProperties(_this$wf$options, ["container", "mediaElement"]);
+	          var options = _objectWithoutProperties(_this$wf$options, _excluded);
 
 	      var _this$canvas = this.canvas,
 	          width = _this$canvas.width,
@@ -1150,7 +1189,7 @@
 	  return Controller;
 	}();
 
-	function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+	function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
 
 	function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 
@@ -1288,6 +1327,11 @@
 	      return this;
 	    }
 	  }, {
+	    key: "exportImageAsBlob",
+	    value: function exportImageAsBlob() {
+	      return this.template.exportImageAsBlob();
+	    }
+	  }, {
 	    key: "update",
 	    value: function update() {
 	      if (this.template && this.drawer) {
@@ -1324,7 +1368,7 @@
 	  }, {
 	    key: "version",
 	    get: function get() {
-	      return '2.0.8';
+	      return '2.1.0';
 	    }
 	  }, {
 	    key: "env",
@@ -1335,9 +1379,12 @@
 	    key: "default",
 	    get: function get() {
 	      return {
-	        container: '#waveform',
+	        container: null,
 	        mediaElement: null,
 	        useWorker: true,
+	        width: 1500,
+	        height: 500,
+	        shadowCanvas: true,
 	        wave: true,
 	        waveColor: 'rgba(255, 255, 255, 0.1)',
 	        backgroundColor: 'rgb(28, 32, 34)',
@@ -1352,7 +1399,7 @@
 	        rulerColor: 'rgba(255, 255, 255, 0.5)',
 	        rulerAtTop: true,
 	        scrollable: false,
-	        refreshRate: 50,
+	        refreshDelay: 50,
 	        channel: 0,
 	        duration: 10,
 	        padding: 5,
@@ -1373,27 +1420,30 @@
 	      };
 
 	      return {
-	        container: 'htmlelement|htmldivelement',
+	        container: 'null|htmlelement|htmldivelement',
 	        mediaElement: 'null|htmlvideoelement|htmlaudioelement',
+	        width: 'null|number',
+	        height: 'null|number',
+	        shadowCanvas: 'boolean',
 	        useWorker: 'boolean',
 	        wave: 'boolean',
-	        waveColor: 'string',
-	        backgroundColor: 'string',
+	        waveColor: 'string|object',
+	        backgroundColor: 'string|object',
 	        paddingColor: 'string',
 	        cursor: 'boolean',
 	        cursorColor: 'string',
 	        progress: 'boolean',
-	        progressColor: 'string',
+	        progressColor: 'string|object',
 	        grid: 'boolean',
 	        gridColor: 'string',
 	        ruler: 'boolean',
 	        rulerColor: 'string',
 	        rulerAtTop: 'boolean',
 	        scrollable: 'boolean',
-	        refreshRate: checkNum('refreshRate', 16, 1000, true),
+	        refreshDelay: checkNum('refreshDelay', 16, 1000, true),
 	        channel: checkNum('channel', 0, 5, true),
 	        duration: checkNum('duration', 1, 100, true),
-	        padding: checkNum('padding', 1, 100, true),
+	        padding: checkNum('padding', 0, 100, true),
 	        waveScale: checkNum('waveScale', 0.1, 10, false),
 	        pixelRatio: checkNum('pixelRatio', 1, 10, false)
 	      };

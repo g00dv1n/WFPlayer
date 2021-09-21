@@ -10,41 +10,54 @@ export default class Template {
     }
 
     init() {
-        const { container, pixelRatio } = this.wf.options;
-        const { clientWidth, clientHeight } = container;
-        const width = clientWidth * pixelRatio;
-        const height = clientHeight * pixelRatio;
+        const { container, pixelRatio, width, height, shadowCanvas } = this.wf.options;
+        const { clientWidth, clientHeight } = container || {};
+        const _width = width || clientWidth * pixelRatio;
+        const _height = height || clientHeight * pixelRatio;
 
         if (this.canvas) {
-            if (this.canvas.width !== width) {
-                this.canvas.width = width;
+            if (this.canvas.width !== _width) {
+                this.canvas.width = _width;
             }
-            if (this.canvas.height !== height) {
-                this.canvas.height = height;
+            if (this.canvas.height !== _height) {
+                this.canvas.height = _height;
             }
         } else {
             errorHandle(
                 this.wf.constructor.instances.every((wf) => wf.options.container !== container),
                 'Cannot mount multiple instances on the same dom element, please destroy the previous instance first.',
             );
-            container.innerHTML = '';
+
             this.canvas = document.createElement('canvas');
-            this.canvas.width = width;
-            this.canvas.height = height;
-            this.canvas.style.width = '100%';
-            this.canvas.style.height = '100%';
-            container.appendChild(this.canvas);
+            this.canvas.width = _width;
+            this.canvas.height = _height;
+
+            if (!shadowCanvas) {
+                container.innerHTML = '';
+                this.canvas.style.width = '100%';
+                this.canvas.style.height = '100%';
+                container.appendChild(this.canvas);
+            }
+
         }
     }
 
     exportImage() {
         const elink = document.createElement('a');
         elink.style.display = 'none';
-        elink.href = this.canvas.toDataURL('image/png');
-        elink.download = `${Date.now()}.png`;
+        elink.href = this.canvas.toDataURL('image/jpeg');
+        elink.download = `${Date.now()}.jpeg`;
         document.body.appendChild(elink);
         elink.click();
         document.body.removeChild(elink);
+    }
+
+    exportImageAsBlob() {
+        return new Promise((resolve) => {
+            this.canvas.toBlob((blob) => {
+                resolve(blob)
+            }, 'image/jpeg')
+        })
     }
 
     destroy() {

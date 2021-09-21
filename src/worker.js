@@ -10,6 +10,19 @@ let density = 1;
 let sampleRate = 44100;
 let channelData = new Float32Array();
 
+function processColor (colorConf, width, ) {
+    if (typeof colorConf === 'object') {
+        const gradient = ctx.createLinearGradient(0, 0, width, 0);
+        gradient.addColorStop(0, colorConf.startColor);
+        gradient.addColorStop(1, colorConf.endColor);
+
+        return gradient
+    }
+
+    return colorConf
+
+}
+
 function secondToTime(second) {
     const add0 = (num) => (num < 10 ? `0${num}` : String(num));
     const hour = Math.floor(second / 3600);
@@ -37,7 +50,7 @@ function getDensity(data) {
 function drawBackground(data) {
     const { width, height, backgroundColor, paddingColor, padding } = data;
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = backgroundColor;
+    ctx.fillStyle = processColor(backgroundColor, width);
     ctx.fillRect(0, 0, width, height);
     ctx.fillStyle = paddingColor;
     ctx.fillRect(0, 0, padding * gridGap, height);
@@ -126,7 +139,7 @@ function drawWave(data) {
         if (stepIndex >= step && xIndex < waveWidth) {
             xIndex += 1;
             const waveX = gridGap * padding + xIndex;
-            ctx.fillStyle = progress && cursorX >= waveX ? progressColor : waveColor;
+            ctx.fillStyle = processColor(progress && cursorX >= waveX ? progressColor : waveColor, width)
             ctx.fillRect(waveX, (1 + min * waveScale) * middle, 1, Math.max(1, (max - min) * middle * waveScale));
             stepIndex = 0;
             min = 1;
@@ -215,6 +228,7 @@ self.onmessage = function onmessage(event) {
             });
         } else {
             wf.emit('update', config);
+            wf.emit('finish')
         }
     }
 };

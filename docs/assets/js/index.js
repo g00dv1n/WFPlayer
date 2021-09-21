@@ -1,4 +1,4 @@
-var $video = document.querySelector('.video');
+var $audio = document.querySelector('.audio');
 var $version = document.querySelector('.version');
 var $open = document.querySelector('.open');
 var $download = document.querySelector('.download');
@@ -10,48 +10,50 @@ var $range = Array.from(document.querySelectorAll('.range input'));
 $version.innerHTML = 'Beta ' + WFPlayer.version;
 
 var wf = null;
-function initWFPlayer(url) {
+function initWFPlayer(url, duration) {
     if (wf) wf.destroy();
+
     wf = new WFPlayer({
-        container: '.waveform',
-        mediaElement: $video,
-        scrollable: $scrollable.checked,
+        container: null,
+        width: 1500,
+        height: 500,
+        shadowCanvas: true,
+        scrollable: false,
+        ruler: false,
+        cursor: false,
+        progress: false,
+        grid: false,
+        padding: 0,
+        backgroundColor: 'rgba(0,0,20,255)',
+        waveColor: {
+            startColor: '#793aab',
+            endColor: '#7ac4bf'
+        },
+        waveScale: 1,
+        duration: duration,
     });
-    wf.load(url);
+
+    wf.load(url)
+
+    wf.on('finish', () => {
+        console.log('finish')
+        wf.exportImageAsBlob()
+        .then(blob => {
+
+            var newImg = document.getElementById('img-render')
+            url = URL.createObjectURL(blob);
+
+            newImg.onload = function() {
+            // no longer need to read the blob so it's revoked
+            URL.revokeObjectURL(url);
+            };
+
+            newImg.src = url;
+        })
+    })
 }
 
-initWFPlayer($video.src);
-
-$open.addEventListener('change', async function () {
-    var file = $open.files[0];
-    if (file) {
-        var canPlayType = $video.canPlayType(file.type);
-        if (canPlayType === 'maybe' || canPlayType === 'probably') {
-            $video.src = URL.createObjectURL(file);
-            if (file.size <= 64 * 1024 * 1024) {
-                initWFPlayer($video.src);
-            } else {
-                // https://ffmpegwasm.github.io
-                const { createFFmpeg, fetchFile } = FFmpeg;
-                const ffmpeg = createFFmpeg({ log: true });
-                ffmpeg.setProgress(({ ratio }) => {
-                    $log.textContent = 'Decoding: ' + ratio * 100 + '%';
-                });
-                $log.textContent = 'FFmpeg module loading...';
-                await ffmpeg.load();
-                ffmpeg.FS('writeFile', file.name, await fetchFile(file));
-                const output = `${Date.now()}.mp3`;
-                $log.textContent = 'Decoding...';
-                await ffmpeg.run('-i', file.name, '-ac', '1', '-ar', '8000', output);
-                const uint8 = ffmpeg.FS('readFile', output);
-                $log.textContent = '';
-                initWFPlayer(uint8);
-            }
-        } else {
-            alert('This file format is not supported');
-        }
-    }
-});
+initWFPlayer('/audio2.m4a', 3);
 
 $download.addEventListener('click', function () {
     wf.exportImage();
@@ -131,3 +133,5 @@ $range.forEach(function ($el) {
         });
     };
 });
+
+

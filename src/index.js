@@ -25,9 +25,12 @@ export default class WFPlayer extends Emitter {
 
     static get default() {
         return {
-            container: '#waveform',
+            container: null,
             mediaElement: null,
             useWorker: true,
+            width: 1500,
+            height: 500,
+            shadowCanvas: true,
             wave: true,
             waveColor: 'rgba(255, 255, 255, 0.1)',
             backgroundColor: 'rgb(28, 32, 34)',
@@ -63,17 +66,20 @@ export default class WFPlayer extends Emitter {
         };
 
         return {
-            container: 'htmlelement|htmldivelement',
+            container: 'null|htmlelement|htmldivelement',
             mediaElement: 'null|htmlvideoelement|htmlaudioelement',
+            width: 'null|number',
+            height: 'null|number',
+            shadowCanvas: 'boolean',
             useWorker: 'boolean',
             wave: 'boolean',
-            waveColor: 'string',
-            backgroundColor: 'string',
+            waveColor: 'string|object',
+            backgroundColor: 'string|object',
             paddingColor: 'string',
             cursor: 'boolean',
             cursorColor: 'string',
             progress: 'boolean',
-            progressColor: 'string',
+            progressColor: 'string|object',
             grid: 'boolean',
             gridColor: 'string',
             ruler: 'boolean',
@@ -83,7 +89,7 @@ export default class WFPlayer extends Emitter {
             refreshDelay: checkNum('refreshDelay', 16, 1000, true),
             channel: checkNum('channel', 0, 5, true),
             duration: checkNum('duration', 1, 100, true),
-            padding: checkNum('padding', 1, 100, true),
+            padding: checkNum('padding', 0, 100, true),
             waveScale: checkNum('waveScale', 0.1, 10, false),
             pixelRatio: checkNum('pixelRatio', 1, 10, false),
         };
@@ -204,6 +210,10 @@ export default class WFPlayer extends Emitter {
     exportImage() {
         this.template.exportImage();
         return this;
+    }
+
+    exportImageAsBlob() {
+        return this.template.exportImageAsBlob();
     }
 
     update() {

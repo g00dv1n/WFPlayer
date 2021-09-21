@@ -18,6 +18,7 @@ export default class Drawer {
                 if (type === 'UPFATE' && !wf.isDestroy) {
                     this.wf.emit('update', data.config);
                     this.ctx.transferFromImageBitmap(data.imageBitmap);
+                    this.wf.emit('finish');
                 }
             });
 
