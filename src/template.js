@@ -45,7 +45,7 @@ export default class Template {
     exportImage() {
         const elink = document.createElement('a');
         elink.style.display = 'none';
-        elink.href = this.canvas.toDataURL('image/jpeg');
+        elink.href = this.canvas.toDataURL('image/jpeg', 1);
         elink.download = `${Date.now()}.jpeg`;
         document.body.appendChild(elink);
         elink.click();
@@ -56,7 +56,7 @@ export default class Template {
         return new Promise((resolve) => {
             this.canvas.toBlob((blob) => {
                 resolve(blob)
-            }, 'image/jpeg')
+            }, 'image/jpeg', 1)
         })
     }
 

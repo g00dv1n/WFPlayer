@@ -524,7 +524,7 @@
 	    value: function exportImage() {
 	      var elink = document.createElement('a');
 	      elink.style.display = 'none';
-	      elink.href = this.canvas.toDataURL('image/jpeg');
+	      elink.href = this.canvas.toDataURL('image/jpeg', 1);
 	      elink.download = "".concat(Date.now(), ".jpeg");
 	      document.body.appendChild(elink);
 	      elink.click();
@@ -538,7 +538,7 @@
 	      return new Promise(function (resolve) {
 	        _this.canvas.toBlob(function (blob) {
 	          resolve(blob);
-	        }, 'image/jpeg');
+	        }, 'image/jpeg', 1);
 	      });
 	    }
 	  }, {
