@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zhw2590582/WFPlayer.git"
+    "url": "git+https://github.com/g00dv1n/WFPlayer.git"
   },
   "keywords": [
     "waveform",
@@ -21,9 +21,9 @@
   "author": "Harvey Zack <laozhaochaguan@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/zhw2590582/WFPlayer/issues"
+    "url": "https://github.com/g00dv1n/WFPlayer/issues"
   },
-  "homepage": "https://github.com/zhw2590582/WFPlayer#readme",
+  "homepage": "https://github.com/g00dv1n/WFPlayer#readme",
   "devDependencies": {
     "@babel/core": "^7.13.15",
     "@babel/plugin-external-helpers": "^7.12.13",
