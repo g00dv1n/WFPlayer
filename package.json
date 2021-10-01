@@ -44,9 +44,9 @@
     "rollup-plugin-replace": "^2.2.0",
     "rollup-plugin-uglify": "^6.0.4",
     "rollup-plugin-worker-inline": "^1.0.6",
-    "servor": "^4.0.2"
+    "servor": "^4.0.2",
+    "option-validator": "^2.0.6"
   },
   "dependencies": {
-    "option-validator": "^2.0.6"
   }
 }
