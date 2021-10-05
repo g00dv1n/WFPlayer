@@ -61,6 +61,8 @@ export default class Template {
     }
 
     destroy() {
-        this.wf.options.container.innerHTML = '';
+        if (this.wf.options.container) {
+            this.wf.options.container.innerHTML = '';
+        }
     }
 }

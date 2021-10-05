@@ -162,6 +162,29 @@ export default class WFPlayer extends Emitter {
         return this;
     }
 
+    lazySetOptions(options = {}) {
+        errorHandle(validator.kindOf(options) === 'object', 'setOptions expects to receive object as a parameter.');
+
+        if (typeof options.container === 'string') {
+            options.container = document.querySelector(options.container);
+        }
+
+        if (typeof options.mediaElement === 'string') {
+            options.mediaElement = document.querySelector(options.mediaElement);
+        }
+
+        this.options = validator(
+            {
+                ...WFPlayer.default,
+                ...this.options,
+                ...options,
+            },
+            WFPlayer.scheme,
+        );
+
+        return this;
+    }
+
     load(target) {
         if (target && typeof target.getChannelData === 'function') {
             this.decoder.decodeSuccess(target);
