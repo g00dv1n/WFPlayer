@@ -52,6 +52,10 @@ export default class Template {
         document.body.removeChild(elink);
     }
 
+    exportImageAsUrl() {
+        return this.canvas.toDataURL('image/jpeg', 1);
+    }
+
     exportImageAsBlob() {
         return new Promise((resolve) => {
             this.canvas.toBlob((blob) => {

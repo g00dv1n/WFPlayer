@@ -239,6 +239,10 @@ export default class WFPlayer extends Emitter {
         return this.template.exportImageAsBlob();
     }
 
+    exportImageAsUrl() {
+        return this.template.exportImageAsUrl();
+    }
+
     update() {
         if (this.template && this.drawer) {
             this.template.update();
